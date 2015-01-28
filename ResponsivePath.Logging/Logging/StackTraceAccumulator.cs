@@ -7,16 +7,26 @@ using System.Threading.Tasks;
 
 namespace ResponsivePath.Logging
 {
-    class StackTraceIndexer : IDataAccumulator
+    /// <summary>
+    /// Adds the current stack trace, or the stack trace from the exception if one is provided, to the Data. Also, adds a "StackTraceHash"
+    /// to identify similar issues.
+    /// </summary>
+    public class StackTraceAccumulator : IDataAccumulator
     {
-        private Regex[] stackTraceReplacements;
+        private readonly Regex[] stackTraceReplacements;
+        private readonly int frameSkip;
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="frameSkip">The number of stack trace frames to skip when pulling from Environment.StackTrace.</param>
         /// <param name="stackTraceReplacements">
         /// A set of regular expressions to filter out parts from the stack trace.  For example, @" in (.*)\\ResponsivePath" 
         /// will filter out anything before the "ReponsivePath" namespace, causing local build directories to be the same.
         /// </param>
-        public StackTraceIndexer(string[] stackTraceReplacements)
+        public StackTraceAccumulator(int frameSkip, string[] stackTraceReplacements)
         {
+            this.frameSkip = frameSkip;
             this.stackTraceReplacements = stackTraceReplacements.Select(replacement => new Regex(replacement, RegexOptions.Compiled)).ToArray();
         }
 
@@ -25,7 +35,7 @@ namespace ResponsivePath.Logging
             string stackTrace;
             if (logEntry.Exception == null)
             {
-                stackTrace = Environment.StackTrace;
+                stackTrace = string.Join("\n", Environment.StackTrace.Split('\n').Skip(3 + frameSkip));
             }
             else
             {

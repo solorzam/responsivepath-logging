@@ -61,7 +61,7 @@
     <Compile Include="Logging\PathedIndexer.cs" />
     <Compile Include="Logging\Severity.cs" />
     <Compile Include="Logging\SqlLogRecorder.cs" />
-    <Compile Include="Logging\StackTraceIndexer.cs" />
+    <Compile Include="Logging\StackTraceAccumulator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
