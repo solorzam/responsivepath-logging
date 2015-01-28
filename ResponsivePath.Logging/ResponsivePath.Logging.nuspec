@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>ResponsivePath.Logging</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Matthew DeKrey and other Contributors</authors>
+    <owners>Responsive Path, LLC</owners>
+    <licenseUrl>http://opensource.org/licenses/MS-PL</licenseUrl>
+    <projectUrl>https://github.com/responsivepath/responsivepath-logging</projectUrl>
+    <iconUrl>http://responsivepath.wpengine.com/wp-content/uploads/2014/01/favicon.ico</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Provides a simple logging platform for complex data aggregation.</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Responsive Path, LLC</copyright>
+    <tags>logging log</tags>
+  </metadata>
+</package>
