@@ -28,7 +28,7 @@ namespace ResponsivePath.Logging
             {
                 try
                 {
-                    await accumulator.AccumulateData(logEntry).ConfigureAwait(false);
+                    accumulator.AccumulateData(logEntry);
                 }
                 catch { }
             }

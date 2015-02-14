@@ -30,7 +30,7 @@ namespace ResponsivePath.Logging
             this.stackTraceReplacements = stackTraceReplacements.Select(replacement => new Regex(replacement, RegexOptions.Compiled)).ToArray();
         }
 
-        Task IDataAccumulator.AccumulateData(LogEntry logEntry)
+        void IDataAccumulator.AccumulateData(LogEntry logEntry)
         {
             string stackTrace;
             if (logEntry.Exception == null)
@@ -63,8 +63,6 @@ namespace ResponsivePath.Logging
             logEntry.Data["StackTrace"] = stackTrace;
             var hash = Convert.ToBase64String(System.Security.Cryptography.MD5.Create().ComputeHash(Encoding.UTF8.GetBytes(stackTrace)));
             logEntry.Data["StackTraceHash"] = hash;
-
-            return Task.FromResult<object>(null);
         }
     }
 }

@@ -16,6 +16,6 @@ namespace ResponsivePath.Logging
         /// </summary>
         /// <param name="logEntry">The log entry for which data should be accumulated.</param>
         /// <returns>A task representing the progress of the action.</returns>
-        Task AccumulateData(LogEntry logEntry);
+        void AccumulateData(LogEntry logEntry);
     }
 }
