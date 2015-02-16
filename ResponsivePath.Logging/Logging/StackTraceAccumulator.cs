@@ -57,7 +57,8 @@ namespace ResponsivePath.Logging
 
             foreach (var regex in stackTraceReplacements)
             {
-                stackTrace = regex.Replace(stackTrace, "");
+                var replaced = regex.Match(stackTrace).Groups[1].Value;
+                stackTrace = stackTrace.Replace(replaced, "");
             }
 
             logEntry.Data["StackTrace"] = stackTrace;
