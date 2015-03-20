@@ -45,6 +45,23 @@ namespace ResponsivePath.Logging
     /// REFERENCES [dbo].[Entries] ([EntryId])
     /// 
     /// ALTER TABLE [dbo].[EntryIndexes] CHECK CONSTRAINT [FK_EntryIndexes_Entries]
+    /// 
+    /// CREATE NONCLUSTERED INDEX [Entries_Severity] ON [dbo].[Entries]
+    /// (
+    /// 	[Severity] ASC,
+    /// 	[Timestamp] ASC
+    /// )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+    ///
+    /// CREATE NONCLUSTERED INDEX [Entries_Time] ON [dbo].[Entries]
+    /// (
+    /// 	[Timestamp] ASC
+    /// )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+    ///
+    /// CREATE NONCLUSTERED INDEX [EntryIndexes_KeyValue] ON [dbo].[EntryIndexes]
+    /// (
+    /// 	[Key] ASC,
+    /// 	[Value] ASC
+    /// )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
     /// </remarks>
     public class SqlLogRecorder : ILogRecorder
     {
