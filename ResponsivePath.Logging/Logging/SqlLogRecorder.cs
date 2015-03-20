@@ -16,7 +16,7 @@ namespace ResponsivePath.Logging
     /// Commands in the log recorder expect the connection string to default to a database with the following tables.
     /// 
     /// CREATE TABLE [dbo].[Entries](
-    /// 	[EntityId] [int] IDENTITY(1,1) NOT NULL,
+    /// 	[EntryId] [int] IDENTITY(1,1) NOT NULL,
     /// 	[Timestamp] [datetime2](7) NOT NULL,
     /// 	[Severity] [varchar](50) NOT NULL,
     /// 	[Message] [varchar](200) NULL,
@@ -24,7 +24,7 @@ namespace ResponsivePath.Logging
     /// 	[Data] [varchar](max) NULL,
     ///  CONSTRAINT [PK_Entries] PRIMARY KEY CLUSTERED 
     /// (
-    /// 	[EntityId] ASC
+    /// 	[EntryId] ASC
     /// )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
     /// ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
     /// 
@@ -42,7 +42,7 @@ namespace ResponsivePath.Logging
     /// ) ON [PRIMARY]
     /// 
     /// ALTER TABLE [dbo].[EntryIndexes]  WITH CHECK ADD  CONSTRAINT [FK_EntryIndexes_Entries] FOREIGN KEY([EntryId])
-    /// REFERENCES [dbo].[Entries] ([EntityId])
+    /// REFERENCES [dbo].[Entries] ([EntryId])
     /// 
     /// ALTER TABLE [dbo].[EntryIndexes] CHECK CONSTRAINT [FK_EntryIndexes_Entries]
     /// </remarks>
