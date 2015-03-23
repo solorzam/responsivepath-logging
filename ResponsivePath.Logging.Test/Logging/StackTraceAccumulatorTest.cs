@@ -28,7 +28,75 @@ namespace ResponsivePath.Logging
 
             // Assert
             Assert.IsTrue(((string)logEntry.Data["StackTrace"]).StartsWith("   at ResponsivePath.Logging.StackTraceAccumulatorTest.AccumulateStackTraceExceptionTest() in \\ResponsivePath.Logging.Test\\Logging\\StackTraceAccumulatorTest.cs:line "));
-            Assert.AreEqual("RWN+2uUbOWSYgNGRGAwjkA==", logEntry.Data["StackTraceHash"]);
+            Assert.IsNotNull(logEntry.Data["StackTraceHash"]);
+        }
+
+        [TestMethod]
+        public async Task AccumulateStackTraceExceptionTaskTest()
+        {
+            // Arrange
+            var exception = new Exception();
+            Func<Task> action = async () =>
+            {
+                await Task.Yield();
+                throw exception;
+            };
+            try
+            {
+                await action();
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+            }
+
+            var target = (IDataAccumulator)new StackTraceAccumulator(0, new[] { @" in (.*)\\ResponsivePath" });
+            var logEntry = new LogEntry { Exception = exception };
+
+            // Act
+            target.AccumulateData(logEntry);
+
+            // Assert
+            Assert.IsTrue(((string)logEntry.Data["StackTrace"]).Contains("--- Async ---"));
+            Assert.IsTrue(((string)logEntry.Data["StackTrace"]).StartsWith("   at ResponsivePath.Logging.StackTraceAccumulatorTest.<>c__DisplayClass3.<<AccumulateStackTraceExceptionTaskTest>b__2>d__5.MoveNext() in \\ResponsivePath.Logging.Test\\Logging\\StackTraceAccumulatorTest.cs:line "));
+            Assert.IsNotNull(logEntry.Data["StackTraceHash"]);
+        }
+
+
+        [TestMethod]
+        public void AccumulateStackTraceTest()
+        {
+            // Arrange
+            var target = (IDataAccumulator)new StackTraceAccumulator(0, new[] { @" in (.*)\\ResponsivePath" });
+            var logEntry = new LogEntry { };
+
+            // Act
+            target.AccumulateData(logEntry);
+
+            // Assert
+            Assert.IsTrue(((string)logEntry.Data["StackTrace"]).StartsWith("   at ResponsivePath.Logging.StackTraceAccumulatorTest.AccumulateStackTraceTest() in \\ResponsivePath.Logging.Test\\Logging\\StackTraceAccumulatorTest.cs:line "));
+            Assert.IsNotNull(logEntry.Data["StackTraceHash"]);
+        }
+
+        [TestMethod]
+        public async Task AccumulateStackTraceTaskTest()
+        {
+            // Arrange
+            var target = (IDataAccumulator)new StackTraceAccumulator(0, new[] { @" in (.*)\\ResponsivePath" });
+            var logEntry = new LogEntry { };
+            Func<Task> action = async () =>
+            {
+                await Task.Yield();
+                target.AccumulateData(logEntry);
+            };
+
+            // Act
+            await action();
+
+            // Assert
+            Assert.IsTrue(((string)logEntry.Data["StackTrace"]).Contains("--- Async ---"));
+            Assert.IsTrue(((string)logEntry.Data["StackTrace"]).StartsWith("   at ResponsivePath.Logging.StackTraceAccumulatorTest.<>c__DisplayClassf.<<AccumulateStackTraceTaskTest>b__e>d__11.MoveNext() in \\ResponsivePath.Logging.Test\\Logging\\StackTraceAccumulatorTest.cs:line "));
+            Assert.IsNotNull(logEntry.Data["StackTraceHash"]);
         }
     }
 }

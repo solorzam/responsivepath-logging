@@ -35,7 +35,7 @@ namespace ResponsivePath.Logging
             string stackTrace;
             if (logEntry.Exception == null)
             {
-                stackTrace = string.Join("\n", Environment.StackTrace.Split('\n').Skip(3 + frameSkip));
+                stackTrace = string.Join("\n", TrimAsync(Environment.StackTrace.Split('\n').Skip(3 + frameSkip)));
             }
             else
             {
@@ -52,7 +52,7 @@ namespace ResponsivePath.Logging
                     ex = stack.Pop();
                     stackTraceBuilder.AppendLine(ex.StackTrace);
                 } while (stack.Count > 0);
-                stackTrace = stackTraceBuilder.ToString();
+                stackTrace = string.Join("\n", TrimAsyncException(stackTraceBuilder.ToString().Split('\n')));
             }
 
             foreach (var regex in stackTraceReplacements)
@@ -64,6 +64,26 @@ namespace ResponsivePath.Logging
             logEntry.Data["StackTrace"] = stackTrace;
             var hash = Convert.ToBase64String(System.Security.Cryptography.MD5.Create().ComputeHash(Encoding.UTF8.GetBytes(stackTrace)));
             logEntry.Data["StackTraceHash"] = hash;
+        }
+
+        private IEnumerable<string> TrimAsync(IEnumerable<string> lines)
+        {
+            if (lines.Any(line => line.Contains("System.Threading.ExecutionContext.RunInternal")))
+            {
+                return lines.TakeWhile(line => !line.Contains("System.Threading.ExecutionContext.RunInternal"))
+                    .Concat(new[] { "--- Async ---" });
+            }
+            return lines;
+        }
+
+        private IEnumerable<string> TrimAsyncException(IEnumerable<string> lines)
+        {
+            if (lines.Any(line => line.Contains("System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess")))
+            {
+                return lines.TakeWhile(line => !line.Contains("System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess"))
+                    .Concat(new[] { "--- Async ---" });
+            }
+            return lines;
         }
     }
 }
