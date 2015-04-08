@@ -119,8 +119,8 @@ VALUES (@entryid, @key, @value);
      }
  })
             {
-                await connection.OpenAsync();
-                var entryId = Convert.ToInt32(await cmdCreateEntry.ExecuteScalarAsync());
+                await connection.OpenAsync().ConfigureAwait(false);
+                var entryId = Convert.ToInt32(await cmdCreateEntry.ExecuteScalarAsync().ConfigureAwait(false));
 
                 cmdCreateIndex.Parameters["@entryid"].Value = entryId;
                 foreach (var index in from key in logEntry.Indexes.AllKeys
@@ -130,7 +130,7 @@ VALUES (@entryid, @key, @value);
                     cmdCreateIndex.Parameters["@key"].Value = index.key;
                     cmdCreateIndex.Parameters["@value"].Value = index.value;
 
-                    await cmdCreateIndex.ExecuteNonQueryAsync();
+                    await cmdCreateIndex.ExecuteNonQueryAsync().ConfigureAwait(false);
                 }
             }
         }

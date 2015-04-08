@@ -43,7 +43,7 @@ namespace ResponsivePath.Logging
             try
             {
                 await Task.WhenAll(from recorder in config.Recorders
-                                   select recorder.Save(logEntry));
+                                   select recorder.Save(logEntry)).ConfigureAwait(false);
             }
             catch { }
         }
