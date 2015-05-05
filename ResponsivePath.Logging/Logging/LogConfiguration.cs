@@ -50,5 +50,10 @@ namespace ResponsivePath.Logging
         /// A list of recorders for each log entry
         /// </summary>
         public IList<ILogRecorder> Recorders { get; private set; }
+
+        /// <summary>
+        /// True if the log recorder should block until the log is complete; setting this to false will run Indexers and Recorders without awaiting. Defaults to false.
+        /// </summary>
+        public bool WaitForLogRecording { get; set; }
     }
 }

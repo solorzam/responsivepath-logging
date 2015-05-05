@@ -12,7 +12,35 @@ namespace ResponsivePath.Logging
     public class LoggerTest
     {
         [TestMethod]
-        public void StandardTest()
+        public void StandardSynchronousTest()
+        {
+            // Arrange
+            var mockAccumulator = new Mock<IDataAccumulator>();
+            var mockIndexer = new Mock<ILogIndexer>();
+            var mockRecorder = new Mock<ILogRecorder>();
+            var config = new LogConfiguration()
+            {
+                Accumulators = { mockAccumulator.Object },
+                Indexers = { mockIndexer.Object },
+                Recorders = { mockRecorder.Object },
+                WaitForLogRecording = true,
+            };
+            var target = (ILogger)new Logger(config);
+            var entry = new LogEntry();
+            var mutex = new System.Threading.Mutex(true);
+            mockIndexer.Setup(idx => idx.IndexData(entry)).Returns(Task.Run(() => mutex.WaitOne()));
+
+            // Act
+            target.Record(entry).Wait();
+
+            // Assert
+            mockAccumulator.Verify(acc => acc.AccumulateData(entry), Times.Once());
+            mockIndexer.Verify(acc => acc.IndexData(entry), Times.Once());
+            mockRecorder.Verify(acc => acc.Save(entry), Times.Once());
+        }
+
+        [TestMethod]
+        public void StandardAsynchronousTest()
         {
             // Arrange
             var mockAccumulator = new Mock<IDataAccumulator>();
@@ -26,6 +54,11 @@ namespace ResponsivePath.Logging
             };
             var target = (ILogger)new Logger(config);
             var entry = new LogEntry();
+            var mutexIndex = new System.Threading.ManualResetEvent(false);
+            var mutexIndexCompleted = new System.Threading.ManualResetEvent(false);
+            var mutexRecord = new System.Threading.ManualResetEvent(false);
+            mockIndexer.Setup(idx => idx.IndexData(entry)).Returns(Task.Run(() => { mutexIndex.WaitOne(); mutexIndexCompleted.Set(); }));
+            mockRecorder.Setup(idx => idx.Save(entry)).Returns(() => Task.Run(() => { mutexIndexCompleted.WaitOne(); mutexRecord.Set(); }));
 
             // Act
             target.Record(entry).Wait();
@@ -33,6 +66,9 @@ namespace ResponsivePath.Logging
             // Assert
             mockAccumulator.Verify(acc => acc.AccumulateData(entry), Times.Once());
             mockIndexer.Verify(acc => acc.IndexData(entry), Times.Once());
+            mockRecorder.Verify(acc => acc.Save(entry), Times.Never());
+            mutexIndex.Set();
+            mutexRecord.WaitOne();
             mockRecorder.Verify(acc => acc.Save(entry), Times.Once());
         }
 

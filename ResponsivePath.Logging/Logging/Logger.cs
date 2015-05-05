@@ -32,20 +32,27 @@ namespace ResponsivePath.Logging
                 }
                 catch { }
             }
-            foreach (var indexer in config.Indexers)
+            var logTask = Task.Run(async () =>
             {
+                foreach (var indexer in config.Indexers)
+                {
+                    try
+                    {
+                        await indexer.IndexData(logEntry).ConfigureAwait(false);
+                    }
+                    catch { }
+                }
                 try
                 {
-                    await indexer.IndexData(logEntry).ConfigureAwait(false);
+                    await Task.WhenAll(from recorder in config.Recorders
+                                       select recorder.Save(logEntry)).ConfigureAwait(false);
                 }
                 catch { }
-            }
-            try
+            });
+            if (config.WaitForLogRecording)
             {
-                await Task.WhenAll(from recorder in config.Recorders
-                                   select recorder.Save(logEntry)).ConfigureAwait(false);
+                await logTask.ConfigureAwait(false);
             }
-            catch { }
         }
     }
 }
