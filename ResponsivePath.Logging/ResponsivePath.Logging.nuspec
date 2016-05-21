@@ -15,4 +15,7 @@
     <copyright>Responsive Path, LLC</copyright>
     <tags>logging log</tags>
   </metadata>
+  <files>
+    <file src="..\ResponsivePath.SqlLogDatabase\bin\$configuration$\ResponsivePath.SqlLogDatabase.dacpac" target="lib\net45\" />
+  </files>
 </package>

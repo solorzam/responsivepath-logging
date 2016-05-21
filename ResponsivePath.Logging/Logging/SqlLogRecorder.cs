@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Data.Common;
+using DeKreyConsulting.AdoTestability;
 
 namespace ResponsivePath.Logging
 {
@@ -13,74 +15,55 @@ namespace ResponsivePath.Logging
     /// A log recorder that writes to a sql database.
     /// </summary>
     /// <remarks>
-    /// Commands in the log recorder expect the connection string to default to a database with the following tables.
-    /// 
-    /// CREATE TABLE [dbo].[Entries](
-    /// 	[EntryId] [int] IDENTITY(1,1) NOT NULL,
-    /// 	[Timestamp] [datetime2](7) NOT NULL,
-    /// 	[Severity] [varchar](50) NOT NULL,
-    /// 	[Message] [varchar](200) NULL,
-    /// 	[Exception] [varchar](max) NULL,
-    /// 	[Data] [varchar](max) NULL,
-    ///  CONSTRAINT [PK_Entries] PRIMARY KEY CLUSTERED 
-    /// (
-    /// 	[EntryId] ASC
-    /// )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-    /// ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-    /// 
-    /// 
-    /// CREATE TABLE [dbo].[EntryIndexes](
-    /// 	[EntryId] [int] NOT NULL,
-    /// 	[Key] [varchar](50) NOT NULL,
-    /// 	[Value] [varchar](200) NOT NULL,
-    ///  CONSTRAINT [PK_EntryIndexes] PRIMARY KEY CLUSTERED 
-    /// (
-    /// 	[EntryId] ASC,
-    /// 	[Key] ASC,
-    /// 	[Value] ASC
-    /// )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-    /// ) ON [PRIMARY]
-    /// 
-    /// ALTER TABLE [dbo].[EntryIndexes]  WITH CHECK ADD  CONSTRAINT [FK_EntryIndexes_Entries] FOREIGN KEY([EntryId])
-    /// REFERENCES [dbo].[Entries] ([EntryId])
-    /// 
-    /// ALTER TABLE [dbo].[EntryIndexes] CHECK CONSTRAINT [FK_EntryIndexes_Entries]
-    /// 
-    /// CREATE NONCLUSTERED INDEX [Entries_Severity] ON [dbo].[Entries]
-    /// (
-    /// 	[Severity] ASC,
-    /// 	[Timestamp] ASC
-    /// )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-    ///
-    /// CREATE NONCLUSTERED INDEX [Entries_Time] ON [dbo].[Entries]
-    /// (
-    /// 	[Timestamp] ASC
-    /// )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-    ///
-    /// CREATE NONCLUSTERED INDEX [EntryIndexes_KeyValue] ON [dbo].[EntryIndexes]
-    /// (
-    /// 	[Key] ASC,
-    /// 	[Value] ASC
-    /// )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+    /// Commands in the log recorder expect the connection string to default to a database that matches the dacpac.
     /// </remarks>
     public class SqlLogRecorder : ILogRecorder
     {
+        /// <summary>
+        /// Inserts a new log entry
+        /// </summary>
+        public static CommandBuilder cmdCreateEntry = new CommandBuilder(@"INSERT INTO Entries (Timestamp, Severity, Message, Exception, Data)
+                                                                           VALUES (@timestamp, @severity, @message, @exception, @data);
+                                                                           SELECT SCOPE_IDENTITY();", 
+            new Dictionary<string, Action<DbParameter>>
+            {
+                { "@timestamp", param => param.DbType = System.Data.DbType.DateTime2 },
+                { "@severity", param => param.DbType = System.Data.DbType.String },
+                { "@message", param => param.DbType = System.Data.DbType.String },
+                { "@exception", param => param.DbType = System.Data.DbType.String },
+                { "@data", param => param.DbType = System.Data.DbType.String },
+            });
+        /// <summary>
+        /// Inserts an index value
+        /// </summary>
+        public static CommandBuilder cmdCreateIndex = new CommandBuilder(@"INSERT INTO EntryIndexes ([EntryId], [Key], [Value])
+                                                                           VALUES (@entryid, @key, @value);",
+            new Dictionary<string, Action<DbParameter>>
+            {
+                { "@entryid", param => param.DbType = System.Data.DbType.Int32 },
+                { "@key", param => param.DbType = System.Data.DbType.String },
+                { "@value", param => param.DbType = System.Data.DbType.String },
+            });
+
+        private readonly DbProviderFactory providerFactory;
         private readonly string connectionString;
         private readonly Severity minSeverity;
-        private readonly IList<string> propertiesToIgnore;
+        private readonly IList<string> pathsToIgnore;
 
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="connectionString">Specifies the connection string for the sql connection</param>
         /// <param name="minSeverity">The minimum severity to log to the database.</param>
-        /// <param name="propertiesToIgnore">Properties in data to ignore. Useful for not logging SSNs, card numbers, and other sensitive 
+        /// <param name="pathsToIgnore">JSON paths to ignore, rooted inside Exception and Data. Useful for not logging SSNs, card numbers, and other sensitive 
         /// information that might be nested in logged objects.</param>
-        public SqlLogRecorder(string connectionString, Severity minSeverity, IEnumerable<string> propertiesToIgnore)
+        /// <param name="providerFactory">The database provider factory. Should be either SqlClient or a mock.</param>
+        public SqlLogRecorder(string connectionString, Severity minSeverity, IEnumerable<string> pathsToIgnore, DbProviderFactory providerFactory = null)
         {
+            this.providerFactory = providerFactory ?? SqlClientFactory.Instance;
             this.connectionString = connectionString;
             this.minSeverity = minSeverity;
-            this.propertiesToIgnore = propertiesToIgnore.ToList().AsReadOnly();
+            this.pathsToIgnore = pathsToIgnore.ToList().AsReadOnly();
         }
 
         async Task ILogRecorder.Save(LogEntry logEntry)
@@ -90,45 +73,30 @@ namespace ResponsivePath.Logging
                 return;
             }
 
-            using (var connection = new SqlConnection(connectionString))
-            using (var cmdCreateEntry = new SqlCommand(@"
-INSERT INTO Entries (Timestamp, Severity, Message, Exception, Data)
-VALUES (@timestamp, @severity, @message, @exception, @data);
-SELECT SCOPE_IDENTITY();
-", connection)
- {
-     Parameters = 
-     { 
-        new SqlParameter("@timestamp", logEntry.Timestamp), 
-        new SqlParameter("@severity", logEntry.Severity.ToString("g")),
-        new SqlParameter("@message", logEntry.Message ?? (object)DBNull.Value),
-        new SqlParameter("@exception", JsonEncode(logEntry.Exception) ?? (object)DBNull.Value),
-        new SqlParameter("@data", JsonEncode(logEntry.Data) ?? (object)DBNull.Value),
-     }
- })
-            using (var cmdCreateIndex = new SqlCommand(@"
-INSERT INTO EntryIndexes ([EntryId], [Key], [Value])
-VALUES (@entryid, @key, @value);
-", connection)
- {
-     Parameters = 
-     { 
-         new SqlParameter("@entryid", null),
-         new SqlParameter("@key", null),
-         new SqlParameter("@value", null),
-     }
- })
+            using (var connection = providerFactory.CreateConnection(connectionString))
+            using (var cmdCreateEntry = SqlLogRecorder.cmdCreateEntry.BuildFrom(connection, new Dictionary<string, object>
+            {
+                { "@timestamp", logEntry.Timestamp },
+                { "@severity", logEntry.Severity.ToString("g") },
+                { "@message", logEntry.Message ?? (object)DBNull.Value },
+                { "@exception", JsonEncode(logEntry.Exception) ?? (object)DBNull.Value },
+                { "@data", JsonEncode(logEntry.Data) ?? (object)DBNull.Value },
+            }))
+            using (var cmdCreateIndex = SqlLogRecorder.cmdCreateIndex.BuildFrom(connection))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 var entryId = Convert.ToInt32(await cmdCreateEntry.ExecuteScalarAsync().ConfigureAwait(false));
 
-                cmdCreateIndex.Parameters["@entryid"].Value = entryId;
+                cmdCreateIndex.ApplyParameters(new Dictionary<string, object> { { "@entryid", entryId } });
                 foreach (var index in from key in logEntry.Indexes.AllKeys
                                       from value in logEntry.Indexes.GetValues(key)
                                       select new { key, value })
                 {
-                    cmdCreateIndex.Parameters["@key"].Value = index.key;
-                    cmdCreateIndex.Parameters["@value"].Value = index.value;
+                    cmdCreateIndex.ApplyParameters(new Dictionary<string, object>
+                    {
+                        { "@key", index.key },
+                        { "@value", index.value },
+                    });
 
                     await cmdCreateIndex.ExecuteNonQueryAsync().ConfigureAwait(false);
                 }
@@ -139,10 +107,28 @@ VALUES (@entryid, @key, @value);
         {
             if (data == null)
                 return null;
-            return JsonConvert.SerializeObject(data, new Newtonsoft.Json.JsonSerializerSettings
+
+            if ((pathsToIgnore?.Count ?? 0) > 0)
             {
-                ContractResolver = new HidePropertiesContractResolver(propertiesToIgnore)
-            });
+                var jsonTokenized = Newtonsoft.Json.Linq.JToken.FromObject(data);
+                foreach (var path in pathsToIgnore)
+                {
+                    try
+                    {
+                        var values = jsonTokenized.SelectTokens(path, false).ToArray();
+                        foreach (var value in values)
+                        {
+                            value.Parent.Remove();
+                        }
+                    }
+                    catch { }
+                }
+                return jsonTokenized.ToString();
+            }
+            else
+            {
+                return JsonConvert.SerializeObject(data);
+            }
         }
 
         private class HidePropertiesContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver

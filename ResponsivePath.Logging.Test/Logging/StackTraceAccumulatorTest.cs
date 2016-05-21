@@ -4,12 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Text.RegularExpressions;
 
 namespace ResponsivePath.Logging
 {
     [TestClass]
     public class StackTraceAccumulatorTest
     {
+        static readonly Regex regex = new Regex("^   at ResponsivePath\\.Logging\\.StackTraceAccumulatorTest\\..+ in \\\\ResponsivePath\\.Logging\\.Test\\\\Logging\\\\StackTraceAccumulatorTest\\.cs\\:line ");
+
         [TestMethod]
         public void AccumulateStackTraceExceptionTest()
         {
@@ -27,7 +30,7 @@ namespace ResponsivePath.Logging
             target.AccumulateData(logEntry);
 
             // Assert
-            Assert.IsTrue(((string)logEntry.Data["StackTrace"]).StartsWith("   at ResponsivePath.Logging.StackTraceAccumulatorTest.AccumulateStackTraceExceptionTest() in \\ResponsivePath.Logging.Test\\Logging\\StackTraceAccumulatorTest.cs:line "));
+            Assert.IsTrue(regex.IsMatch(((string)logEntry.Data["StackTrace"])));
             Assert.IsNotNull(logEntry.Data["StackTraceHash"]);
         }
 
@@ -58,7 +61,7 @@ namespace ResponsivePath.Logging
 
             // Assert
             Assert.IsTrue(((string)logEntry.Data["StackTrace"]).Contains("--- Async ---"));
-            Assert.IsTrue(((string)logEntry.Data["StackTrace"]).StartsWith("   at ResponsivePath.Logging.StackTraceAccumulatorTest.<>c__DisplayClass3.<<AccumulateStackTraceExceptionTaskTest>b__2>d__5.MoveNext() in \\ResponsivePath.Logging.Test\\Logging\\StackTraceAccumulatorTest.cs:line "));
+            Assert.IsTrue(regex.IsMatch(((string)logEntry.Data["StackTrace"])));
             Assert.IsNotNull(logEntry.Data["StackTraceHash"]);
         }
 
@@ -74,7 +77,7 @@ namespace ResponsivePath.Logging
             target.AccumulateData(logEntry);
 
             // Assert
-            Assert.IsTrue(((string)logEntry.Data["StackTrace"]).StartsWith("   at ResponsivePath.Logging.StackTraceAccumulatorTest.AccumulateStackTraceTest() in \\ResponsivePath.Logging.Test\\Logging\\StackTraceAccumulatorTest.cs:line "));
+            Assert.IsTrue(regex.IsMatch(((string)logEntry.Data["StackTrace"])));
             Assert.IsNotNull(logEntry.Data["StackTraceHash"]);
         }
 
@@ -95,7 +98,7 @@ namespace ResponsivePath.Logging
 
             // Assert
             Assert.IsTrue(((string)logEntry.Data["StackTrace"]).Contains("--- Async ---"));
-            Assert.IsTrue(((string)logEntry.Data["StackTrace"]).StartsWith("   at ResponsivePath.Logging.StackTraceAccumulatorTest.<>c__DisplayClassf.<<AccumulateStackTraceTaskTest>b__e>d__11.MoveNext() in \\ResponsivePath.Logging.Test\\Logging\\StackTraceAccumulatorTest.cs:line "));
+            Assert.IsTrue(regex.IsMatch(((string)logEntry.Data["StackTrace"])));
             Assert.IsNotNull(logEntry.Data["StackTraceHash"]);
         }
     }
